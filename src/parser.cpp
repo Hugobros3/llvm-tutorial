@@ -11,7 +11,8 @@ int get_next_token() {
 
 std::unique_ptr<ExpressionNode> parse_expression();
 
-std::unique_ptr<ExpressionNode> die(const char *prout) {
+std::unique_ptr<ExpressionNode> die(const char *death_msg) {
+    printf("%s", death_msg);
     return nullptr;
 }
 
@@ -94,10 +95,10 @@ int get_precedence(int token) {
 }
 
 std::unique_ptr<ExpressionNode> parse_binop_rhs(int prev_precedence, std::unique_ptr<ExpressionNode> left) {
-    while(true) {
+    while (true) {
         int token_precedence = get_precedence(current_token);
 
-        if(token_precedence < prev_precedence)
+        if (token_precedence < prev_precedence)
             return left;
 
         // we can infer it's a binop (prec > 0)
@@ -129,15 +130,15 @@ std::unique_ptr<Prototype> parse_prototype() {
     std::string function_name = getIdentifierString();
     get_next_token();
 
-    if(current_token != '(')
+    if (current_token != '(')
         die("Expected (");
 
     std::vector<std::string> argument_names;
-    while(get_next_token() == TOKEN_IDENTIFIER) {
+    while (get_next_token() == TOKEN_IDENTIFIER) {
         argument_names.push_back(getIdentifierString());
     }
 
-    if(current_token != ')')
+    if (current_token != ')')
         die("Expected )");
 
     get_next_token();
@@ -157,4 +158,35 @@ std::unique_ptr<Function> parse_top_level() {
     auto expression = parse_expression();
     auto prototype = std::make_unique<Prototype>("", std::vector<std::string>());
     return std::make_unique<Function>(std::move(prototype), std::move(expression));
+}
+
+std::unique_ptr<Prototype> parse_extern() {
+    get_next_token();
+    return parse_prototype();
+}
+
+void mainLoop() {
+    get_next_token();
+
+    while (true) {
+        switch (current_token) {
+            case TOKEN_EOF:
+                return;
+            case ';':
+                get_next_token();
+                break;
+            case TOKEN_DEF: {
+                auto def = parse_function_definition();
+                break;
+            }
+            case TOKEN_EXTERN: {
+                auto extern_def = parse_extern();
+                break;
+            }
+            default: {
+                auto top_level = parse_top_level();
+                break;
+            }
+        }
+    }
 }
